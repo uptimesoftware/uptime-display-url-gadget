@@ -2,7 +2,7 @@
 <Module>
 	<ModulePrefs title="Display URL" description="Use this gadget to load a webpage into your dashboard." thumbnail="displayUrlThm.png"/>
 	<gadget_version>
-		1.0
+		<%= pkg.gadget_version %>
 	</gadget_version>
 	<grid_info>
 		<supported_versions>
