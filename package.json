@@ -5,7 +5,7 @@
   "main": "src/definition.xml",
   "repository": {
     "type": "git",
-    "url": "https://github.com/uptimesoftware/uptime-pinOnImage-gadget.git"
+    "url": "https://github.com/uptimesoftware/uptime-display-url-gadget.git"
   },
   "dependencies": {
     "uptime-gadget-tasks": "git://github.com/uptimesoftware/uptime-gadget-tasks.git"
