@@ -1,6 +1,6 @@
 {
   "name": "uptime.DisplayUrl",
-  "version": "1.0.0",
+  "version": "1.0.0-SNAPSHOT",
   "description": "Use this gadget to load a webpage into your dashboard.",
   "main": "src/definition.xml",
   "repository": {
