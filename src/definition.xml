@@ -6,7 +6,7 @@
 	</gadget_version>
 	<grid_info>
 		<supported_versions>
-			7.3,7.4,7.5,7.6,8.0
+			7.3,7.4,7.5,7.6,7.7,7.8,8.0
 		</supported_versions>
 		<supported_platforms>
 			windows,linux
@@ -66,8 +66,25 @@
 		#minutePlural {
 			display: none;
 		}
+		#msgDiv{
+			display: none;
+			font-size: 0.75em;
+			color: red;
+			padding:10px 10px 10px 10px;
+		}
+		#loader{
+			display: none;
+			font-size: 0.75em;
+			color: black;
+			padding:10px 10px 10px 10px;
+			background-image: url("__UPTIME_GADGET_BASE__/spinner.gif");
+			background-position: 100px 10px;
+			background-repeat: no-repeat;
+		}
 	</style>
 	<div id="error"></div>
+	<div id="msgDiv">The webpage you are trying to load in the gadget has restricted the access from cross origin and does not allow such operation. Uptime will try to load the available static content on the page.</div>
+	<div id = "loader">Processing ... </div>
 	<div id="dest"></div>
 	<div id="edit">
 		<label for="iframeUrl">URL: <span id="eg">(e.g. http://www.uptimesoftware.com/)</span></label>
@@ -148,6 +165,7 @@
 			$("#save").prop("disabled", false);
 			$("#error").empty().slideUp();
 			$("#dest").hide();
+			$("#msgDiv").hide();
 			$("#edit").show();
 			$("#iframeUrl").val(settings ? settings.iframeUrl : "").focus();
 			$("#scroll").val(settings ? settings.scroll : "auto");
@@ -157,21 +175,99 @@
 				$("#refreshRate").val(-1);
 			}
 		}
+				
 		function doRender(settings) {
+			$("#msgDiv").hide();
 			var dest = $("#dest");
+			var URL = "__UPTIME_GADGET_BASE__";
 			if (settings && settings.iframeUrl) {
-				$("#edit").hide();
+				$("#edit").hide();				
 				dest.empty()
-						.css("background-position", "-9999px -9999px")
-						.append($('<iframe id="frame"></iframe>')
-						.prop("src", settings.iframeUrl)
-						.prop("scrolling", settings.scroll)
-						.height(dest.data("dimensions").height)
-						.width(dest.data("dimensions").width))
-						.show();
+					.css("background-position", "-9999px -9999px")						
+					.append($('<iframe id="frame"></iframe>')
+					.prop("scrolling", settings.scroll)	
+					.height(dest.data("dimensions").height)
+					.width(dest.data("dimensions").width))
+					.show();	
+				$("#loader").show();	
+				$.ajax({
+					type: "POST",
+					url: URL + "/requestHeader.php",
+					data: { link : settings.iframeUrl},
+					success:function(result){
+						if(result.toUpperCase() == "DENY" || result.toUpperCase() == "SAMEORIGIN" || result.toUpperCase() == "S" || result.toUpperCase() == "D" ){	
+							$.ajax({
+								type: "POST",
+								url: URL + "/proxy.php",
+								data: { link : settings.iframeUrl},
+								success:function(result){
+								$("#loader").hide();
+								$("#msgDiv").show();
+								var doc = document.getElementById('frame').contentWindow.document;								
+								doc.open();							
+								doc.write(result);							
+								doc.close();
+								},
+								error:function(jqXHR, exception){
+									displayErrorMessage(jqXHR, exception);
+								}
+							}); 
+						}
+						else{	
+						$("#loader").hide();
+						dest.empty()
+							.css("background-position", "-9999px -9999px")						
+							.append($('<iframe id="frame"></iframe>')
+							.prop("scrolling", settings.scroll)	
+							.prop("src", settings.iframeUrl)
+							.height(dest.data("dimensions").height)
+							.width(dest.data("dimensions").width))
+							.show();						
+						}
+						
+                    },
+					error:function(jqXHR, exception){
+						displayErrorMessage(jqXHR, exception);
+					}
+				}); 
+								
 				if (settings.refreshInterval && settings.refreshInterval > 0) {
-					dest.data("interval", setInterval(function() {
+					$("#msgDiv").hide();
+					dest.data("interval", setInterval(function() {	
+					$("#loader").show();
+					$.ajax({
+					type: "POST",
+					url: URL + "/requestHeader.php",
+					data: { link : settings.iframeUrl},
+					success:function(result){
+					
+						if(result.toUpperCase() == "DENY" || result.toUpperCase() == "SAMEORIGIN" || result.toUpperCase() == "S" || result.toUpperCase() == "D" ){							
+							$.ajax({
+								type: "POST",
+								url: URL + "/proxy.php",
+								data: { link : settings.iframeUrl},
+								success:function(result){
+								$("#loader").hide();
+								$("#msgDiv").show();
+								var doc = document.getElementById('frame').contentWindow.document;								
+								doc.open();							
+								doc.write(result);							
+								doc.close();
+								},
+								error:function(jqXHR, exception){
+									displayErrorMessage(jqXHR, exception);
+								}
+							}); 
+						}
+						else{
+						$("#loader").hide();
 						$("#frame").prop("src", settings.iframeUrl);
+						}
+					},
+					error:function(jqXHR, exception){
+						displayErrorMessage(jqXHR, exception);
+					}
+					})
 					}, settings.refreshInterval * 1000));
 				}
 			} else {
@@ -180,9 +276,31 @@
 		}
 		function doError(status) {
 			$("#error").empty();
-			uptimeErrorFormatter.getErrorBox(status, "Error communicating with up.time").appendTo('#error');
+			uptimeErrorFormatter.getErrorBox(status, "Error communicating with Uptime").appendTo('#error');
 			$("#error").slideDown();
 			$("#save").prop("disabled", false);
+		}
+		function displayErrorMessage(jqXHR, exception){
+			$("#loader").hide();
+			var msg = '';
+			if (jqXHR.status === 0) {
+				msg = 'Not connect.\n Verify Network.';
+			} else if (jqXHR.status == 404) {
+				msg = 'Requested page not found. [404]';
+			} else if (jqXHR.status == 500) {
+				msg = 'Internal Server Error [500].';
+			} else if (exception === 'parsererror') {
+				msg = 'Requested JSON parse failed.';
+			} else if (exception === 'timeout') {
+				msg = 'Time out error.';
+			} else if (exception === 'abort') {
+				msg = 'Ajax request aborted.';
+			} else {
+				msg = 'Uncaught Error.\n' + jqXHR.responseText;
+			}
+			$("#error").empty();
+			uptimeErrorFormatter.getErrorBox(msg, jqXHR.status).appendTo('#error');
+			$("#error").slideDown();	
 		}
 	</script>
 	]]>
