@@ -7,6 +7,5 @@ stream_context_set_default( [
 ]);
 $url = $_POST['link'];
 $header = get_headers($url, 1);
-echo $header["X-Frame-Options"][0];
-
+echo $header['X-FRAME-OPTIONS'].$header['X-Frame-Options'][0];
 ?>

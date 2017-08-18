@@ -175,7 +175,51 @@
 				$("#refreshRate").val(-1);
 			}
 		}
-				
+		
+		function onFrameReady() {
+			var URL = "__UPTIME_GADGET_BASE__";
+			var url = $('#frame').attr('src');
+			if(url == null){
+				return;
+			}
+			$.ajax({
+					type: "POST",
+					url: URL + "/proxy.php",
+					data: { link : url},
+					success:function(result){
+						var parser = new DOMParser();
+						var xmlDoc = parser.parseFromString(result,"text/html");
+						var metas = xmlDoc.getElementsByTagName('META');
+						if(metas.length == 0){
+							return;
+						}
+						var content = null;
+						for(i = metas.length; i > 0; i--){
+							var temp = metas[i - 1].getAttribute("content");
+							var httpeqv = metas[i - 1].getAttribute("http-equiv");
+							if(temp == null || httpeqv == null){
+								continue;
+							}
+							if (temp.indexOf("https") >= 0 && httpeqv.toLowerCase() == "refresh"){
+								content = temp;
+								break;
+							}
+						}
+						
+						if (content != null){
+							var settings = {
+								iframeUrl: $.trim("https" + content.split("https")[1])
+							};
+							doRender(settings);
+							
+						}
+					},
+					error:function(jqXHR, exception){
+						displayErrorMessage(jqXHR, exception);
+					}
+			}); 
+		}
+		
 		function doRender(settings) {
 			$("#msgDiv").hide();
 			var dest = $("#dest");
@@ -184,7 +228,7 @@
 				$("#edit").hide();				
 				dest.empty()
 					.css("background-position", "-9999px -9999px")						
-					.append($('<iframe id="frame"></iframe>')
+					.append($('<iframe id="frame" onload="onFrameReady()" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>')
 					.prop("scrolling", settings.scroll)	
 					.height(dest.data("dimensions").height)
 					.width(dest.data("dimensions").width))
@@ -207,6 +251,7 @@
 								doc.open();							
 								doc.write(result);							
 								doc.close();
+								$("#msgDiv").show();
 								},
 								error:function(jqXHR, exception){
 									displayErrorMessage(jqXHR, exception);
@@ -217,14 +262,13 @@
 						$("#loader").hide();
 						dest.empty()
 							.css("background-position", "-9999px -9999px")						
-							.append($('<iframe id="frame"></iframe>')
+							.append($('<iframe id="frame" onload="onFrameReady()"></iframe>')
 							.prop("scrolling", settings.scroll)	
 							.prop("src", settings.iframeUrl)
 							.height(dest.data("dimensions").height)
 							.width(dest.data("dimensions").width))
-							.show();						
+							.show();
 						}
-						
                     },
 					error:function(jqXHR, exception){
 						displayErrorMessage(jqXHR, exception);
